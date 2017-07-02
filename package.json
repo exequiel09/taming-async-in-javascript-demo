@@ -1,0 +1,10 @@
+{
+  "name": "async-js-demo-app",
+  "version": "0.0.0",
+  "license": "MIT",
+  "author": "Exequiel Ceasar Navarrete <exequiel.navarrete09@gmail.com>",
+  "scripts": {
+    "start": "echo \"no start\""
+  },
+  "private": true
+}
