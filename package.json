@@ -4,7 +4,12 @@
   "license": "MIT",
   "author": "Exequiel Ceasar Navarrete <exequiel.navarrete09@gmail.com>",
   "scripts": {
-    "start": "echo \"no start\""
+    "start": "node app/server/app.js"
   },
-  "private": true
+  "private": true,
+  "dependencies": {
+    "express": "^4.15.3",
+    "leaflet": "^1.0.3",
+    "normalize.css": "^7.0.0"
+  }
 }
