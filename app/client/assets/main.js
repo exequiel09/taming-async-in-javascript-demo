@@ -133,6 +133,19 @@
 
             // update marker's content
             .then(template => marker.setPopupContent(template))
+
+            // handle all possible errors that might occur along the way
+            .catch((err) => {
+                console.log(`Aborting promise. Error occured: ${err.message}`);
+
+                // notify the user about the situation
+                marker.setPopupContent("We have experienced some issues please try again later.");
+
+                // abort any running http request
+                if (httpRequest !== null) {
+                    httpRequest.abort();
+                }
+            })
             ;
     });
 
