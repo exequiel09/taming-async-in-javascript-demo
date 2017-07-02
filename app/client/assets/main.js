@@ -80,8 +80,10 @@
             evt.latlng.lng
         ]).addTo(map);
 
+        // show add default marker content indicating status
         marker.bindPopup("<span>Loading data... Please wait..</span>").openPopup();
 
+        // trigger the http request
         showInformation(evt.latlng.lat, evt.latlng.lng);
     });
 
