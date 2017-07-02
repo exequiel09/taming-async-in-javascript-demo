@@ -97,15 +97,53 @@
                 }
 
                 // get time of sunset and sunrise
-                template += '</dl>';
+                httpRequest = http.request(`https://api.sunrise-sunset.org/json?lat=${latlng[0]}&lng=${latlng[1]}`, {
+                    method: 'get',
+                    headers: {
+                        'Accept': 'application/json'
+                    },
+                    success: function(data) {
+                        const sunriseAndSunsetResult = JSON.parse(data);
 
-                // create new marker and add it to the map where it is clicked
-                marker = L.marker(latlng).addTo(map);
+                        if (sunriseAndSunsetResult.status === 'OK') {
+                            template += `
+                                <dt>Today's Sunrise</dt>
+                                <dd>${sunriseAndSunsetResult.results.sunrise}</dd>
+                            `;
 
-                marker.bindPopup(template).openPopup();
+                            template += `
+                                <dt>Today's Sunset</dt>
+                                <dd>${sunriseAndSunsetResult.results.sunset}</dd>
+                            `;
+                        } else {
+                            template += `
+                                <dt>Today's Sunrise</dt>
+                                <dd>N/A</dd>
+                            `;
 
-                // remove the reference to the XHR instance
-                httpRequest = null;
+                            template += `
+                                <dt>Today's Sunset</dt>
+                                <dd>N/A</dd>
+                            `;
+                        }
+
+                        template += '</dl>';
+
+                        // create new marker and add it to the map where it is clicked
+                        marker = L.marker(latlng).addTo(map);
+
+                        marker.bindPopup(template).openPopup();
+
+                        // remove the reference to the XHR instance
+                        httpRequest = null;
+                    },
+                    fail: function(status, msg) {
+                        console.log(`Sunset APi Error: ${status} - ${msg}`);
+
+                        // remove the reference to the XHR instance
+                        httpRequest = null;
+                    }
+                });
             },
             fail: function(status, msg) {
                 console.log(`Geocoding Error: ${status} - ${msg}`);
