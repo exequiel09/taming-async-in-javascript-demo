@@ -3,45 +3,57 @@
 
     const http = {
         request: function(url, options) {
-            if (typeof options === 'undefined') {
-                options = {};
-            }
-
-            let xhr = new XMLHttpRequest();
-
-            // set the default http verb to get
-            let method = 'get';
-            if (typeof options.method !== 'undefined') {
-                method = options.method;
-            }
-
-            // The last parameter must be set to true to make an asynchronous request
-            xhr.open(method.toUpperCase(), url, true);
-
-            // apply the headers dynamically
-            if (typeof options.headers !== 'undefined' ) {
-                Object.keys(options.headers).forEach(function(headerKey) {
-                    xhr.setRequestHeader(headerKey, options.headers[headerKey]);
-                });
-            }
-
-            // process the onload event
-            xhr.onload = function() {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    if (typeof options.success !== 'undefined') {
-                        options.success(xhr.response);
-                    }
-                } else {
-                    if (typeof options.fail !== 'undefined') {
-                        options.fail(xhr.status, "Error");
-                    }
+            let xhr        = new XMLHttpRequest();
+            let xhrPromise = new Promise((resolve, reject) => {
+                // set the default http verb to get
+                let method = 'get';
+                if (typeof options.method !== 'undefined') {
+                    method = options.method;
                 }
+
+                // The last parameter must be set to true to make an asynchronous request
+                xhr.open(method.toUpperCase(), url, true);
+
+                // apply the headers dynamically
+                if (typeof options.headers !== 'undefined' ) {
+                    Object.keys(options.headers).forEach(function(headerKey) {
+                        xhr.setRequestHeader(headerKey, options.headers[headerKey]);
+                    });
+                }
+
+                // process the onload event
+                xhr.onload = function() {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        if (typeof options.success !== 'undefined') {
+                            options.success(xhr.response);
+                        }
+
+                        // resolve the promise
+                        resolve(xhr.response);
+                    } else {
+                        if (typeof options.fail !== 'undefined') {
+                            options.fail(xhr.status, "Error");
+                        }
+
+                        // reject the promise
+                        reject({
+                            error: xhr.response,
+                            message: "Error"
+                        });
+                    }
+                };
+
+                // send the request
+                xhr.send();
+            });
+
+            // add abort method to promise since cancellable promises are under discussion of tc39
+            // <https://github.com/tc39/proposal-cancelable-promises>
+            xhrPromise.abort = function() {
+                xhr.abort();
             };
 
-            // send the request
-            xhr.send();
-
-            return xhr;
+            return xhrPromise;
         }
     }
 
@@ -62,9 +74,10 @@
     map.on('click', function(evt) {
         const mapInstance = this;
 
-        // abort the current http request
+        // abort the current http request and remove any references to it
         if (httpRequest !== null) {
             httpRequest.abort();
+            httpRequest = null;
         }
 
         // remove the old marker and its popup before creating a new one
@@ -83,65 +96,69 @@
         // show add default marker content indicating status
         marker.bindPopup("<span>Loading data... Please wait..</span>").openPopup();
 
-        // trigger the http request
-        showInformation(evt.latlng.lat, evt.latlng.lng);
-    });
+        // store the reference to the xhr-based promise to prevent from getting the value from the last `.then`
+        httpRequest = getAddress(evt.latlng.lat, evt.latlng.lng);
 
-    function showInformation(lat, lng) {
-        getAddress(lat, lng);
-    }
+        // invoke the promise chain
+        httpRequest
+            .then(geocodingResult => {
+                httpRequest = getSunriseSunset(evt.latlng.lat, evt.latlng.lng);
+
+                return Promise.all([geocodingResult, httpRequest]);
+            })
+
+            // parse the results to convert them to json
+            .then(result => {
+                let [geocodingResult, sunriseAndSunsetResult] = result;
+
+                // convert responses to json
+                geocodingResult        = JSON.parse(geocodingResult);
+                sunriseAndSunsetResult = JSON.parse(sunriseAndSunsetResult);
+
+                return [
+                    geocodingResult,
+                    sunriseAndSunsetResult
+                ];
+            })
+
+            // assemble the template for the marker popup
+            .then(jsonData => {
+                const [geocodingResult, sunriseAndSunsetResult] = jsonData;
+
+                return compileTemplate({
+                    geocoding: geocodingResult,
+                    sunriseAndSunset: sunriseAndSunsetResult
+                });
+            })
+
+            // update marker's content
+            .then(template => marker.setPopupContent(template))
+            ;
+    });
 
     function getAddress(lat, lng) {
         const endpoint = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=AIzaSyAi4LDku4WJGIC2f7xQJuRixTrwB3QL0yQ`;
-        const result   = {};
 
-        httpRequest = http.request(endpoint, {
+        return http.request(endpoint, {
             method: 'get',
             headers: {
                 'Accept': 'application/json'
-            },
-            success: function(data) {
-                result.geocoding = JSON.parse(data);
-
-                getSunriseSunset(lat, lng, result);
-
-                // remove the reference to the XHR instance
-                httpRequest = null;
-            },
-            fail: function(status, msg) {
-                console.log(`Geocoding Error: ${status} - ${msg}`);
-
-                // remove the reference to the XHR instance
-                httpRequest = null;
             }
         });
     }
 
-    function getSunriseSunset(lat, lng, result) {
-        // get time of sunset and sunrise
-        httpRequest = http.request(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}`, {
+    function getSunriseSunset(lat, lng) {
+        const endpoint = `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}`;
+
+        return http.request(endpoint, {
             method: 'get',
             headers: {
                 'Accept': 'application/json'
-            },
-            success: function(data) {
-                result.sunriseAndSunset = JSON.parse(data);
-
-                onFinish(result);
-
-                // remove the reference to the XHR instance
-                httpRequest = null;
-            },
-            fail: function(status, msg) {
-                console.log(`Sunset APi Error: ${status} - ${msg}`);
-
-                // remove the reference to the XHR instance
-                httpRequest = null;
             }
         });
     }
 
-    function onFinish(data) {
+    function compileTemplate(data) {
         let template =  `<dl>`;
 
         // assemble the template based on the data
@@ -181,8 +198,7 @@
 
         template += '</dl>';
 
-        // update marker's content
-        marker.setPopupContent(template);
+        return template;
     }
 
 })(window, document, window.L);
