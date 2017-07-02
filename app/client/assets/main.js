@@ -74,6 +74,11 @@
             marker = null;
         }
 
+        // create new marker and add it to the map where it is clicked
+        marker = L.marker(latlng).addTo(map);
+
+        marker.bindPopup("<span>Loading data... Please wait..</span>").openPopup();
+
         // get the address of the current latlng
         httpRequest = http.request(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latlng.join(',')}&key=AIzaSyAi4LDku4WJGIC2f7xQJuRixTrwB3QL0yQ`, {
             method: 'get',
@@ -129,10 +134,8 @@
 
                         template += '</dl>';
 
-                        // create new marker and add it to the map where it is clicked
-                        marker = L.marker(latlng).addTo(map);
-
-                        marker.bindPopup(template).openPopup();
+                        // update marker's content
+                        marker.setPopupContent(template);
 
                         // remove the reference to the XHR instance
                         httpRequest = null;
