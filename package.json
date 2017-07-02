@@ -6,5 +6,9 @@
   "scripts": {
     "start": "echo \"no start\""
   },
-  "private": true
+  "private": true,
+  "dependencies": {
+    "leaflet": "^1.0.3",
+    "normalize.css": "^7.0.0"
+  }
 }
