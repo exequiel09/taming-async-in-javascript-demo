@@ -57,12 +57,103 @@
     map.setView([13, 122], 6);
 
     // dynamically create markers
-    // TODO: display loading screen
     let marker      = null;
     let httpRequest = null;
+
+    function showInformation(lat, lng) {
+        let template = '<dl>';
+
+        getAddress(lat, lng, template);
+    }
+
+    function getAddress(lat, lng, template) {
+        const endpoint = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=AIzaSyAi4LDku4WJGIC2f7xQJuRixTrwB3QL0yQ`;
+
+        httpRequest = http.request(endpoint, {
+            method: 'get',
+            headers: {
+                'Accept': 'application/json'
+            },
+            success: function(data) {
+                const geocodingResult = JSON.parse(data);
+                if (geocodingResult.results.length > 0) {
+                    template += `
+                        <dt>Address</dt>
+                        <dd>${geocodingResult.results[0].formatted_address}</dd>
+                    `;
+                } else {
+                    template += `
+                        <dt>Address</dt>
+                        <dd>N/A</dd>
+                    `;
+                }
+
+                getSunriseSunset(lat, lng, template);
+            },
+            fail: function(status, msg) {
+                console.log(`Geocoding Error: ${status} - ${msg}`);
+
+                // remove the reference to the XHR instance
+                httpRequest = null;
+            }
+        });
+    }
+
+    function getSunriseSunset(lat, lng, template) {
+        // get time of sunset and sunrise
+        httpRequest = http.request(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}`, {
+            method: 'get',
+            headers: {
+                'Accept': 'application/json'
+            },
+            success: function(data) {
+                const sunriseAndSunsetResult = JSON.parse(data);
+
+                if (sunriseAndSunsetResult.status === 'OK') {
+                    template += `
+                        <dt>Today's Sunrise</dt>
+                        <dd>${sunriseAndSunsetResult.results.sunrise}</dd>
+                    `;
+
+                    template += `
+                        <dt>Today's Sunset</dt>
+                        <dd>${sunriseAndSunsetResult.results.sunset}</dd>
+                    `;
+                } else {
+                    template += `
+                        <dt>Today's Sunrise</dt>
+                        <dd>N/A</dd>
+                    `;
+
+                    template += `
+                        <dt>Today's Sunset</dt>
+                        <dd>N/A</dd>
+                    `;
+                }
+
+                template += '</dl>';
+
+                onFinish(template);
+            },
+            fail: function(status, msg) {
+                console.log(`Sunset APi Error: ${status} - ${msg}`);
+
+                // remove the reference to the XHR instance
+                httpRequest = null;
+            }
+        });
+    }
+
+    function onFinish(template) {
+        // update marker's content
+        marker.setPopupContent(template);
+
+        // remove the reference to the XHR instance
+        httpRequest = null;
+    }
+
     map.on('click', function(evt) {
         const mapInstance = this;
-        const latlng = [evt.latlng.lat, evt.latlng.lng];
 
         // abort the current http request
         if (httpRequest !== null) {
@@ -77,86 +168,14 @@
         }
 
         // create new marker and add it to the map where it is clicked
-        marker = L.marker(latlng).addTo(map);
+        marker = L.marker([
+            evt.latlng.lat,
+            evt.latlng.lng
+        ]).addTo(map);
 
         marker.bindPopup("<span>Loading data... Please wait..</span>").openPopup();
 
-        // get the address of the current latlng
-        httpRequest = http.request(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latlng.join(',')}&key=AIzaSyAi4LDku4WJGIC2f7xQJuRixTrwB3QL0yQ`, {
-            method: 'get',
-            headers: {
-                'Accept': 'application/json'
-            },
-            success: function(data) {
-                const geocodingResult = JSON.parse(data);
-                let template          = '<dl>';
-
-                if (geocodingResult.results.length > 0) {
-                    template += `
-                        <dt>Address</dt>
-                        <dd>${geocodingResult.results[0].formatted_address}</dd>
-                    `;
-                } else {
-                    template += `
-                        <dt>Address</dt>
-                        <dd>N/A</dd>
-                    `;
-                }
-
-                // get time of sunset and sunrise
-                httpRequest = http.request(`https://api.sunrise-sunset.org/json?lat=${latlng[0]}&lng=${latlng[1]}`, {
-                    method: 'get',
-                    headers: {
-                        'Accept': 'application/json'
-                    },
-                    success: function(data) {
-                        const sunriseAndSunsetResult = JSON.parse(data);
-
-                        if (sunriseAndSunsetResult.status === 'OK') {
-                            template += `
-                                <dt>Today's Sunrise</dt>
-                                <dd>${sunriseAndSunsetResult.results.sunrise}</dd>
-                            `;
-
-                            template += `
-                                <dt>Today's Sunset</dt>
-                                <dd>${sunriseAndSunsetResult.results.sunset}</dd>
-                            `;
-                        } else {
-                            template += `
-                                <dt>Today's Sunrise</dt>
-                                <dd>N/A</dd>
-                            `;
-
-                            template += `
-                                <dt>Today's Sunset</dt>
-                                <dd>N/A</dd>
-                            `;
-                        }
-
-                        template += '</dl>';
-
-                        // update marker's content
-                        marker.setPopupContent(template);
-
-                        // remove the reference to the XHR instance
-                        httpRequest = null;
-                    },
-                    fail: function(status, msg) {
-                        console.log(`Sunset APi Error: ${status} - ${msg}`);
-
-                        // remove the reference to the XHR instance
-                        httpRequest = null;
-                    }
-                });
-            },
-            fail: function(status, msg) {
-                console.log(`Geocoding Error: ${status} - ${msg}`);
-
-                // remove the reference to the XHR instance
-                httpRequest = null;
-            }
-        });
+        showInformation(evt.latlng.lat, evt.latlng.lng);
     });
 
 })(window, document, window.L);
