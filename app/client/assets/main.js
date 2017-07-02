@@ -69,7 +69,9 @@
             httpRequest.abort();
         }
 
+        // remove the old marker and its popup before creating a new one
         if (marker !== null) {
+            marker.unbindPopup();
             marker.removeFrom(mapInstance);
             marker = null;
         }
