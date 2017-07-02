@@ -3,9 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <title>Taming Async in JS</title>
+    <link rel="stylesheet" href="https://unpkg.com/normalize.css@7.0.0/normalize.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.1.0/dist/leaflet.css" 
+        integrity="sha512-wcw6ts8Anuw10Mzh9Ytw4pylW8+NAD4ch3lqm9lzAsTxg0GFeJgoAtxuCLREZSC5lUXdVyo/7yfsqFjQ4S+aKw=="
+        crossorigin=""/>
+    <style>
+        .map-container {
+            position: relative;
+            height: 100vh;
+        }
+
+        .map-container .map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
 </head>
 <body>
-    
+    <div class="map-container">
+        <div id="main-map" class="map map--leaflet"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.1.0/dist/leaflet.js"
+        integrity="sha512-mNqn2Wg7tSToJhvHcqfzLMU6J4mkOImSPTxVZAdo+lcPlk+GhZmYgACEe0x35K7YzW1zJ7XyJV/TT1MrdXvMcA=="
+        crossorigin="">
+    </script>
+    <script>
+        (function(window, document, L) {
+            "use strict";
+
+            const map = L.map('main-map', {});
+
+            // create a base layer and add it to the map
+            const baseLayer = L.tileLayer('http://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+                attribution: `Map data &copy; <a href="http://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors,
+                  &copy; <a href="http://cartodb.com/attributions" target="_blank">CartoDB</a>`
+            }).addTo(map);
+
+            // set the center and zoom level of the map
+            map.setView([13, 122], 6);
+
+        })(window, document, window.L);
+    </script>
 </body>
 </html>
 
