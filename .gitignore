@@ -1,0 +1,43 @@
+# compiled output
+/tmp
+
+# dependencies
+/node_modules
+/bower_components
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+*.launch
+.settings/
+.vscode
+
+# misc
+/.sass-cache
+/connect.lock
+/coverage/*
+/libpeerconnection.log
+npm-debug.log
+npm-debug.log*
+testem.log
+/typings
+
+#System Files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+.VolumeIcon.icns
+.fseventsd
+ehthumbs.db
+# Icon?
+
+# ctags
+tags
+.tags
+
+# Env
+.dir-env
+
+
