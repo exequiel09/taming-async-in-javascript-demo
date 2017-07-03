@@ -1,0 +1,15 @@
+{
+  "name": "taming-async-in-javascript-demo",
+  "version": "1.0.0",
+  "license": "MIT",
+  "author": "Exequiel Ceasar Navarrete <exequiel.navarrete09@gmail.com>",
+  "scripts": {
+    "start": "node app/server/app.js"
+  },
+  "private": true,
+  "dependencies": {
+    "express": "^4.15.3",
+    "leaflet": "^1.0.3",
+    "normalize.css": "^7.0.0"
+  }
+}
