@@ -69,15 +69,15 @@
     map.setView([13, 122], 6);
 
     // dynamically create markers
-    let marker      = null;
-    let httpRequest = null;
+    let marker       = null;
+    let httpRequests = [];
     map.on('click', function(evt) {
         const mapInstance = this;
 
         // abort the current http request and remove any references to it
-        if (httpRequest !== null) {
-            httpRequest.abort();
-            httpRequest = null;
+        if (httpRequests.length > 0) {
+            httpRequests.forEach(httpRequest => httpRequest.abort());
+            httpRequests = [];
         }
 
         // remove the old marker and its popup before creating a new one
@@ -102,11 +102,30 @@
     });
 
     async function retrieveAndCompile(lat, lng) {
-        let address          = await getAddress(lat, lng);
-        let sunriseAndSunset = await getSunriseSunset(lat, lng);
+        let address = await (() => {
+            const request = getAddress(lat, lng);
 
+            // add to the httpRequests array
+            httpRequests.push(request);
+
+            return request;
+        })();
+
+        let sunriseAndSunset = await (() => {
+            const request = getSunriseSunset(lat, lng);
+
+            // add to the httpRequests array
+            httpRequests.push(request);
+
+            return request;
+        })();
+
+        // parse the returned result from the api
         address          = JSON.parse(address);
         sunriseAndSunset = JSON.parse(sunriseAndSunset);
+
+        // empty out http requests since all requests are now completed
+        httpRequests = [];
 
         return compileTemplate({
             geocoding: address,
