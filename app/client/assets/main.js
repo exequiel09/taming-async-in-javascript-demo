@@ -69,15 +69,15 @@
     map.setView([13, 122], 6);
 
     // dynamically create markers
-    let marker      = null;
-    let httpRequest = null;
+    let marker       = null;
+    let httpRequests = [];
     map.on('click', function(evt) {
         const mapInstance = this;
 
         // abort the current http request and remove any references to it
-        if (httpRequest !== null) {
-            httpRequest.abort();
-            httpRequest = null;
+        if (httpRequests.length > 0) {
+            httpRequests.forEach(httpRequest => httpRequest.abort());
+            httpRequests = [];
         }
 
         // remove the old marker and its popup before creating a new one
@@ -96,58 +96,58 @@
         // show add default marker content indicating status
         marker.bindPopup("<span>Loading data... Please wait..</span>").openPopup();
 
-        // store the reference to the xhr-based promise to prevent from getting the value from the last `.then`
-        httpRequest = getAddress(evt.latlng.lat, evt.latlng.lng);
-
-        // invoke the promise chain
-        httpRequest
-            .then(geocodingResult => {
-                httpRequest = getSunriseSunset(evt.latlng.lat, evt.latlng.lng);
-
-                return Promise.all([geocodingResult, httpRequest]);
-            })
-
-            // parse the results to convert them to json
-            .then(result => {
-                let [geocodingResult, sunriseAndSunsetResult] = result;
-
-                // convert responses to json
-                geocodingResult        = JSON.parse(geocodingResult);
-                sunriseAndSunsetResult = JSON.parse(sunriseAndSunsetResult);
-
-                return [
-                    geocodingResult,
-                    sunriseAndSunsetResult
-                ];
-            })
-
-            // assemble the template for the marker popup
-            .then(jsonData => {
-                const [geocodingResult, sunriseAndSunsetResult] = jsonData;
-
-                return compileTemplate({
-                    geocoding: geocodingResult,
-                    sunriseAndSunset: sunriseAndSunsetResult
-                });
-            })
-
-            // update marker's content
+        retrieveAndCompile(evt.latlng.lat, evt.latlng.lng)
             .then(template => marker.setPopupContent(template))
-
-            // handle all possible errors that might occur along the way
-            .catch((err) => {
-                console.log(`Aborting promise. Error occured: ${err.message}`);
-
-                // notify the user about the situation
-                marker.setPopupContent("We have experienced some issues please try again later.");
-
-                // abort any running http request
-                if (httpRequest !== null) {
-                    httpRequest.abort();
-                }
-            })
             ;
     });
+
+    async function retrieveAndCompile(lat, lng) {
+        let template = "";
+
+        try {
+            let address = await (() => {
+                const request = getAddress(lat, lng);
+
+                // add to the httpRequests array
+                httpRequests.push(request);
+
+                return request;
+            })();
+
+            let sunriseAndSunset = await (() => {
+                const request = getSunriseSunset(lat, lng);
+
+                // add to the httpRequests array
+                httpRequests.push(request);
+
+                return request;
+            })();
+
+            // parse the returned result from the api
+            address          = JSON.parse(address);
+            sunriseAndSunset = JSON.parse(sunriseAndSunset);
+
+            // empty out http requests since all requests are now completed
+            httpRequests = [];
+
+            template = compileTemplate({
+                geocoding: address,
+                sunriseAndSunset: sunriseAndSunset
+            });
+        } catch(err) {
+            console.log(`Aborting promise. Error occured: ${err.message}`);
+
+            // abort the current http request and remove any references to it
+            if (httpRequests.length > 0) {
+                httpRequests.forEach(httpRequest => httpRequest.abort());
+                httpRequests = [];
+            }
+
+            template = "We have experienced some issues please try again later.";
+        }
+
+        return template;
+    }
 
     function getAddress(lat, lng) {
         const endpoint = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=AIzaSyAi4LDku4WJGIC2f7xQJuRixTrwB3QL0yQ`;
