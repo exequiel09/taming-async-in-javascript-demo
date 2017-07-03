@@ -102,35 +102,51 @@
     });
 
     async function retrieveAndCompile(lat, lng) {
-        let address = await (() => {
-            const request = getAddress(lat, lng);
+        let template = "";
 
-            // add to the httpRequests array
-            httpRequests.push(request);
+        try {
+            let address = await (() => {
+                const request = getAddress(lat, lng);
 
-            return request;
-        })();
+                // add to the httpRequests array
+                httpRequests.push(request);
 
-        let sunriseAndSunset = await (() => {
-            const request = getSunriseSunset(lat, lng);
+                return request;
+            })();
 
-            // add to the httpRequests array
-            httpRequests.push(request);
+            let sunriseAndSunset = await (() => {
+                const request = getSunriseSunset(lat, lng);
 
-            return request;
-        })();
+                // add to the httpRequests array
+                httpRequests.push(request);
 
-        // parse the returned result from the api
-        address          = JSON.parse(address);
-        sunriseAndSunset = JSON.parse(sunriseAndSunset);
+                return request;
+            })();
 
-        // empty out http requests since all requests are now completed
-        httpRequests = [];
+            // parse the returned result from the api
+            address          = JSON.parse(address);
+            sunriseAndSunset = JSON.parse(sunriseAndSunset);
 
-        return compileTemplate({
-            geocoding: address,
-            sunriseAndSunset: sunriseAndSunset
-        });
+            // empty out http requests since all requests are now completed
+            httpRequests = [];
+
+            template = compileTemplate({
+                geocoding: address,
+                sunriseAndSunset: sunriseAndSunset
+            });
+        } catch(err) {
+            console.log(`Aborting promise. Error occured: ${err.message}`);
+
+            // abort the current http request and remove any references to it
+            if (httpRequests.length > 0) {
+                httpRequests.forEach(httpRequest => httpRequest.abort());
+                httpRequests = [];
+            }
+
+            template = "We have experienced some issues please try again later.";
+        }
+
+        return template;
     }
 
     function getAddress(lat, lng) {
