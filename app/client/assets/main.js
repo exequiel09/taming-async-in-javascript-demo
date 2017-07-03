@@ -96,58 +96,23 @@
         // show add default marker content indicating status
         marker.bindPopup("<span>Loading data... Please wait..</span>").openPopup();
 
-        // store the reference to the xhr-based promise to prevent from getting the value from the last `.then`
-        httpRequest = getAddress(evt.latlng.lat, evt.latlng.lng);
-
-        // invoke the promise chain
-        httpRequest
-            .then(geocodingResult => {
-                httpRequest = getSunriseSunset(evt.latlng.lat, evt.latlng.lng);
-
-                return Promise.all([geocodingResult, httpRequest]);
-            })
-
-            // parse the results to convert them to json
-            .then(result => {
-                let [geocodingResult, sunriseAndSunsetResult] = result;
-
-                // convert responses to json
-                geocodingResult        = JSON.parse(geocodingResult);
-                sunriseAndSunsetResult = JSON.parse(sunriseAndSunsetResult);
-
-                return [
-                    geocodingResult,
-                    sunriseAndSunsetResult
-                ];
-            })
-
-            // assemble the template for the marker popup
-            .then(jsonData => {
-                const [geocodingResult, sunriseAndSunsetResult] = jsonData;
-
-                return compileTemplate({
-                    geocoding: geocodingResult,
-                    sunriseAndSunset: sunriseAndSunsetResult
-                });
-            })
-
-            // update marker's content
+        retrieveAndCompile(evt.latlng.lat, evt.latlng.lng)
             .then(template => marker.setPopupContent(template))
-
-            // handle all possible errors that might occur along the way
-            .catch((err) => {
-                console.log(`Aborting promise. Error occured: ${err.message}`);
-
-                // notify the user about the situation
-                marker.setPopupContent("We have experienced some issues please try again later.");
-
-                // abort any running http request
-                if (httpRequest !== null) {
-                    httpRequest.abort();
-                }
-            })
             ;
     });
+
+    async function retrieveAndCompile(lat, lng) {
+        let address          = await getAddress(lat, lng);
+        let sunriseAndSunset = await getSunriseSunset(lat, lng);
+
+        address          = JSON.parse(address);
+        sunriseAndSunset = JSON.parse(sunriseAndSunset);
+
+        return compileTemplate({
+            geocoding: address,
+            sunriseAndSunset: sunriseAndSunset
+        });
+    }
 
     function getAddress(lat, lng) {
         const endpoint = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=AIzaSyAi4LDku4WJGIC2f7xQJuRixTrwB3QL0yQ`;
