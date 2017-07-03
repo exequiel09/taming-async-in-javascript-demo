@@ -1,6 +1,6 @@
 {
-  "name": "async-js-demo-app",
-  "version": "0.0.0",
+  "name": "taming-async-in-javascript-demo",
+  "version": "1.0.0",
   "license": "MIT",
   "author": "Exequiel Ceasar Navarrete <exequiel.navarrete09@gmail.com>",
   "scripts": {
